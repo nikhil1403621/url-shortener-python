@@ -1,4 +1,4 @@
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from . import cache, db
@@ -457,7 +457,7 @@ def delete_link(code: str):
 
 
 @app.get("/{code}")
-def follow(code: str):
+def follow(code: str, request: Request = None):
     """The hot path. Served from Redis so a redirect never queries Postgres."""
     hit = cache.get_json(f"link:{code}")
     if hit:
@@ -469,7 +469,8 @@ def follow(code: str):
         link_id, url = link["id"], link["url"]
         cache.set_json(f"link:{code}", {"id": link_id, "url": url}, ttl=3600)
 
-    db.query("INSERT INTO clicks (link_id, referrer) VALUES (%s, %s)", (link_id, ""),
+    referrer = request.headers.get("referer", "") if request else ""
+    db.query("INSERT INTO clicks (link_id, referrer) VALUES (%s, %s)", (link_id, referrer),
              fetch=False)
     cache.client().incr(f"clicks:{code}")
     return RedirectResponse(url, status_code=302)

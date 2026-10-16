@@ -34,15 +34,20 @@ commands:
             echo "Moving Tag:        ${MOVING_TAG}"
             echo "Immutable Tag:     ${IMMUTABLE_TAG}"
 
-            docker build -t "${REPO_NAME}:${MOVING_TAG}" -t "${REPO_NAME}:${IMMUTABLE_TAG}" .
+            docker build -t "${REPO_NAME}:${MOVING_TAG}" -t "${REPO_NAME}:${IMMUTABLE_TAG}" -t "${REPO_NAME}:1.0" .
 
-            if [ -n "$DOCKERHUB_USER" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            TOKEN="${DOCKERHUB_TOKEN:-$DOCKERHUB_PASSWORD}"
+            if [ -n "$DOCKERHUB_USER" ] && [ -n "$TOKEN" ]; then
               echo "Logging in to Docker Hub as ${DOCKERHUB_USER}..."
-              echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+              echo "$TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
               echo "Pushing moving tag ${REPO_NAME}:${MOVING_TAG}..."
               docker push "${REPO_NAME}:${MOVING_TAG}"
               echo "Pushing immutable tag ${REPO_NAME}:${IMMUTABLE_TAG}..."
               docker push "${REPO_NAME}:${IMMUTABLE_TAG}"
+              if [ "${MOVING_TAG}" = "qa" ] || [ "${MOVING_TAG}" = "prod" ]; then
+                echo "Pushing release tag ${REPO_NAME}:1.0..."
+                docker push "${REPO_NAME}:1.0"
+              fi
               echo "Successfully pushed all tags to Docker Hub."
             else
               echo "WARNING: DOCKERHUB_USER or DOCKERHUB_TOKEN not configured in CircleCI project settings."

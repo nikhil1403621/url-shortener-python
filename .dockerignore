@@ -15,3 +15,7 @@ env/
 README.md
 ruff.toml
 .DS_Store
+url shortner/
+k8s/
+*.md
+*.txt
