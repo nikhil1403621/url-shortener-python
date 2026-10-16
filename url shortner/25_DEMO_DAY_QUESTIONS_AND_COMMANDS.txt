@@ -1,0 +1,170 @@
+================================================================================
+CAPSTONE ASSIGNMENT: URL SHORTENER WITH CLICK ANALYTICS
+DEMO DAY GUIDE, TERMINAL COMMANDS, AND EXAMINER QUESTIONS (10 MARKS)
+================================================================================
+
+--------------------------------------------------------------------------------
+PART 1: GIT & BRANCH PROMOTION (15 MARKS)
+--------------------------------------------------------------------------------
+
+1. Setting Up Protected Branches Ruleset on GitHub:
+   - On GitHub: Settings -> Rules -> Rulesets -> New ruleset -> New branch ruleset
+   - Name: protected-branches
+   - Enforcement status: Active
+   - Bypass list: LEAVE EMPTY
+   - Target branches: Include by pattern -> main, staging, prod
+   - Rules:
+     [x] Restrict deletions
+     [x] Block force pushes
+     [x] Require a pull request before merging (0 approvals)
+
+2. Prove Ruleset Blocks Direct Push (Demo Test):
+   git checkout main
+   git commit --allow-empty -m "testing the ruleset"
+   git push origin main
+   # Expected result: REJECTED by GitHub!
+   # Clean up afterwards:
+   git reset --hard origin/main
+
+3. Promotion via Pull Requests (One direction only):
+   feature/crud-ui-and-pipeline -> main (QA) -> staging -> prod
+   * Always choose "Create a merge commit" (never squash) on promotion PRs!
+
+4. Check Branch Consistency:
+   git log --oneline --graph --all
+   git diff main staging   # MUST BE EMPTY!
+   git diff staging prod   # MUST BE EMPTY!
+
+
+--------------------------------------------------------------------------------
+PART 2: DOCKER COMPOSE & CRUD DEMONSTRATION (15 MARKS)
+--------------------------------------------------------------------------------
+
+1. Start stack with automated migrations & health checks:
+   docker compose up -d --build
+
+2. Check health endpoint:
+   curl -s http://localhost:8080/health
+   # Returns: {"status":"ok","postgres":true,"redis":true}
+
+3. Web UI Dashboard:
+   Open browser at: http://localhost:8080/
+
+4. CRUD Demonstration via curl & Postgres Persistence:
+   # Step A: CREATE (Shorten a URL with custom code)
+   curl -i -X POST http://localhost:8080/shorten \
+     -H "Content-Type: application/json" \
+     -d '{"url":"https://example.com/demo-test","custom":"mycup"}'
+
+   # Step B: READ (Redirect & increment click counter)
+   curl -i http://localhost:8080/mycup
+
+   # Step C: UPDATE (Modify destination URL)
+   curl -i -X PUT http://localhost:8080/api/links/mycup \
+     -H "Content-Type: application/json" \
+     -d '{"url":"https://example.com/demo-updated"}'
+
+   # Step D: VERIFY data in Postgres
+   docker exec url-shortener-postgres psql -U postgres -d url_shortener -c "SELECT code, url FROM links WHERE code = 'mycup';"
+
+   # Step E: DELETE link
+   curl -i -X DELETE http://localhost:8080/api/links/mycup
+
+   # Step F: VERIFY deletion in Postgres
+   docker exec url-shortener-postgres psql -U postgres -d url_shortener -c "SELECT code, url FROM links WHERE code = 'mycup';"
+
+
+--------------------------------------------------------------------------------
+PART 3: CIRCLECI PIPELINE (20 MARKS)
+--------------------------------------------------------------------------------
+
+1. CircleCI Environment Variables:
+   Set in CircleCI: Project Settings -> Environment Variables
+   - DOCKERHUB_USER: your-dockerhub-username
+   - DOCKERHUB_TOKEN: your-dockerhub-access-token
+
+2. Pipeline stages on main (QA):
+   - secret-scan (gitleaks)
+   - lint (ruff check .)
+   - unit-tests (pytest with coverage >= 70%, currently 93%)
+   - integration-tests (against postgres & redis service containers on localhost)
+   - build-and-push-qa (pushes :qa and :main-<sha>)
+
+3. Pipeline stages on staging and prod:
+   - Build-only (pushes :stage and :prod with branch-sha immutable tags, no test stages)
+
+
+--------------------------------------------------------------------------------
+PART 4: KUBERNETES ACROSS 3 NAMESPACES (20 MARKS)
+--------------------------------------------------------------------------------
+
+1. Deploy all namespaces & workloads:
+   ./k8s/setup-k8s.sh
+
+2. Run rolling update demo loop:
+   ./k8s/rollout-demo.sh
+
+   Or run individual commands:
+   # Restart deployment
+   kubectl rollout restart deployment/url-shortener-app -n qa
+
+   # Watch rollout status
+   kubectl rollout status deployment/url-shortener-app -n qa
+
+   # Check running image
+   kubectl get pods -n qa -o jsonpath='{range .items[*]}{.spec.containers[*].image}{"\n"}{end}'
+
+   # Verify Image ID digest
+   POD_NAME=$(kubectl get pods -n qa -l app=url-shortener-app -o jsonpath='{.items[0].metadata.name}')
+   kubectl describe pod "$POD_NAME" -n qa | grep -i "image id"
+
+
+--------------------------------------------------------------------------------
+THE HARD PART: CONCURRENCY & COLLISION PREVENTION
+--------------------------------------------------------------------------------
+
+Question: Two people shortening the same URL at the same moment must not get the same code. Decide whether identical URLs share a code or get separate ones, and make the collision impossible either way.
+
+Answer:
+1. Decision: Separate codes per link.
+   Reason: Marketing campaigns and telemetry require independent attribution. If two users shared the same code, User A's clicks would pollute User B's analytics.
+
+2. Auto-Generated Codes (Atomic DB Sequence + Strict Mathematical Bijection):
+   - Fast insert: INSERT INTO links (code, url) VALUES ('', %s) RETURNING id;
+   - PostgreSQL generates an atomic, lock-free monotonic integer ID via its sequence.
+   - The code is computed via encode(id) into base-58 (23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ).
+   - Because base-58 encoding is a strict bijection (one-to-one and onto), distinct IDs mathematically map to distinct codes. Collisions are impossible.
+
+3. Custom Codes (Preventing TOCTOU Race Condition):
+   - Application-level check (SELECT 1) has a Time-of-Check to Time-of-Use race condition.
+   - We enforce a database-level unique index:
+     CREATE UNIQUE INDEX links_code ON links (code) WHERE code <> '';
+   - Concurrent duplicates are caught by PostgreSQL's ACID transaction engine as UniqueViolation and converted to HTTP 409 Conflict ("code is already taken").
+
+
+--------------------------------------------------------------------------------
+EXAMINER QUESTIONS & MODEL ANSWERS (10 MARKS)
+--------------------------------------------------------------------------------
+
+Q1: Why is this a Deployment and not a Pod?
+A: A Pod is an ephemeral, standalone instance with no self-healing, replication, or rolling update capabilities. If it crashes or the node fails, it is lost. A Deployment manages a ReplicaSet, guaranteeing declarative desired state, automatic self-healing (recreating failed pods), zero-downtime rolling updates, and easy rollbacks.
+
+Q2: Your integration test talks to localhost on CircleCI but to db in Compose. Why are those different?
+A: In Docker Compose, each service runs in an isolated network container attached to a user-defined bridge network; Compose provisions an internal DNS server that resolves service names (postgres, redis) to container IP addresses. In CircleCI, primary and secondary service containers share the same network namespace (localhost); all exposed ports are mapped directly to localhost (localhost:5432 and localhost:6379).
+
+Q3: What happens if I delete one of your Pods right now?
+A: The Deployment's ReplicaSet controller continuously reconciles actual state with desired state (replicas: 1). The moment a Pod is deleted, the controller detects actual (0) < desired (1) and instantly schedules and provisions a new Pod.
+
+Q4: Why does your Dockerfile create a user instead of running as root?
+A: Principle of Least Privilege and container breakout defense. Running as root means that if an attacker exploits a vulnerability or container breakout, they inherit root privileges on the underlying host kernel. Running as an unprivileged user (appuser with /sbin/nologin) confines the process to minimal filesystem and system call privileges.
+
+Q5: Your Service says Running but the page does not load. Where do you look first?
+A: First check: kubectl get endpoints <svc> -n <ns>.
+If ENDPOINTS is <none>, the Service's selector labels do not match the Pod's labels. Next, inspect Pod health probe status (kubectl describe pod) to ensure readiness probes are passing, and check targetPort/port mappings.
+
+Q6: Why :qa and :stage rather than one :latest tag for everything?
+A: :latest is ambiguous, mutable, and breaks environment isolation. Different environments (qa, staging, production) run different stages of the release lifecycle. Moving tags (:qa, :stage, :prod) ensure each namespace tracks only the release certified for that tier. Combining them with immutable tags (:<branch>-<sha>) ensures complete auditability and reproducibility.
+
+Q7: What exactly does rollout restart do — does it rebuild anything?
+A: It does NOT rebuild the Docker image. It injects an updated timestamp annotation (kubectl.kubernetes.io/restartedAt) into the Pod template, which triggers the Deployment controller to perform a rolling update: pulling the latest image tag from the registry (because imagePullPolicy: Always is set) and launching fresh Pods while terminating old ones.
+================================================================================

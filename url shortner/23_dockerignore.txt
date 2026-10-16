@@ -1,0 +1,17 @@
+.git
+.gitignore
+.circleci
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov/
+tests/
+venv/
+.venv/
+env/
+README.md
+ruff.toml
+.DS_Store
