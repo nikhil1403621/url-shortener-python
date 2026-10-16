@@ -18,4 +18,5 @@ ruff.toml
 url shortner/
 k8s/
 *.md
-*.txt
+!requirements.txt
+!requirements-dev.txt
