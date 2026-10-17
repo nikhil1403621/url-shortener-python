@@ -7,7 +7,7 @@ that gets it building, tested and running in CI.
 
 ---
 
-## You do not need Python installed
+## Y. ou do not need Python installed
 
 You will build this into a container, and the container brings its own
 Python 3.12. You are not being asked to extend the app — you are being asked
