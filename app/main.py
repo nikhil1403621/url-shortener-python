@@ -148,8 +148,18 @@ def index():
       <div class="form-group">
         <div class="input-row">
           <input type="url" id="target-url" placeholder="https://example.com/very/long/url" required />
-          <input type="text" id="custom-code" placeholder="custom-code (optional)" style="max-width: 220px;" />
+          <input type="text" id="custom-code" placeholder="custom code (optional)" style="max-width: 220px;" />
           <button class="btn-primary" onclick="createLink()">Shorten</button>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.35rem;">
+          💡 <strong>Tip:</strong> Custom code is <em>optional</em> (auto-generated if empty). Allowed: 3–32 alphanumeric chars (no symbols; excludes confusing <code>0, o, O, 1, l, I</code>).
+        </p>
+        <div style="display: flex; gap: 0.6rem; margin-top: 0.2rem; font-size: 0.82rem; color: var(--text-muted); align-items: center;">
+          <span>Demo examples:</span>
+          <button type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="setDemo('https://github.com', 'github')">github</button>
+          <button type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="setDemo('https://fastapi.tiangolo.com', 'fast')">fast</button>
+          <button type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="setDemo('https://en.wikipedia.org', 'speed')">speed</button>
+          <button type="button" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="setDemo('https://example.com/demo-test', 'mycup')">mycup</button>
         </div>
         <div id="status-box" class="status-msg"></div>
       </div>
@@ -208,6 +218,11 @@ def index():
   </div>
 
   <script>
+    function setDemo(url, code) {
+      document.getElementById('target-url').value = url;
+      document.getElementById('custom-code').value = code;
+    }
+
     async function loadLinks() {
       const tbody = document.getElementById('links-tbody');
       try {
