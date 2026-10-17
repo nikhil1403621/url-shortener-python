@@ -13,10 +13,10 @@ jobs:
             pip install -r requirements.txt
             pip install ruff pytest-cov
       - run:
-          name: Lint Python code
+          name: Lint
           command: ruff check .
       - run:
-          name: Run unit tests
+          name: Unit tests
           command: |
             pytest tests/test_codes.py tests/test_app_unit.py \
               --cov=app --cov-report=term-missing --cov-fail-under=70
