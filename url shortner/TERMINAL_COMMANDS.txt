@@ -1,0 +1,79 @@
+================================================================================
+CAPSTONE DEMO: ALL TERMINAL COMMANDS TO RUN
+================================================================================
+
+OPTION A: AUTOMATED SCRIPT
+--------------------------------------------------------------------------------
+Simply run this single script in your terminal to execute everything step-by-step:
+
+./demo_commands.sh
+
+
+OPTION B: MANUAL COPY-PASTE COMMANDS
+--------------------------------------------------------------------------------
+
+1. HEALTH CHECK:
+----------------
+curl -s http://localhost:8080/health
+
+
+2. CRUD LIFECYCLE & DATABASE PERSISTENCE:
+-----------------------------------------
+# Step A: CREATE (Shorten a link with custom code "mycup")
+curl -i -X POST http://localhost:8080/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com/demo-test","custom":"mycup"}'
+
+# Step B: READ / Follow redirect (returns HTTP 302 Found)
+curl -i http://localhost:8080/mycup
+
+# Step C: UPDATE destination URL
+curl -i -X PUT http://localhost:8080/api/links/mycup \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com/demo-updated"}'
+
+# Step D: VERIFY data in PostgreSQL (psql query)
+docker exec url-shortener-postgres psql -U postgres -d url_shortener -c "SELECT code, url FROM links WHERE code = 'mycup';"
+
+# Step E: DELETE the link
+curl -i -X DELETE http://localhost:8080/api/links/mycup
+
+# Step F: VERIFY deletion from PostgreSQL (returns 0 rows)
+docker exec url-shortener-postgres psql -U postgres -d url_shortener -c "SELECT code, url FROM links WHERE code = 'mycup';"
+
+
+3. ACTIVE LINKS & ANALYTICS:
+----------------------------
+curl -s http://localhost:8080/api/links
+curl -s http://localhost:8080/api/links/welcome/stats
+
+
+4. GIT RULESET REJECTION TEST (PROVE DIRECT PUSH BLOCKED ON MAIN):
+------------------------------------------------------------------
+git checkout main
+git commit --allow-empty -m "testing the ruleset"
+git push origin main
+# Must be rejected by GitHub!
+git reset --hard origin/main
+
+
+5. CHECK BRANCH CONSISTENCY (AFTER PR PROMOTION):
+-------------------------------------------------
+git fetch origin
+git diff origin/main origin/staging
+git diff origin/staging origin/prod
+git log --oneline --graph -n 8
+
+
+6. KUBERNETES DEPLOYMENT & LIVE ROLLING UPDATE DEMO:
+----------------------------------------------------
+# Deploy namespaces, secrets & workloads:
+./k8s/setup-k8s.sh
+
+# Run live rollout restart:
+kubectl rollout restart deployment/url-shortener-app -n qa
+kubectl rollout status deployment/url-shortener-app -n qa
+kubectl get pods -n qa -o jsonpath='{range .items[*]}{.spec.containers[*].image}{"\n"}{end}'
+POD_NAME=$(kubectl get pods -n qa -l app=url-shortener-app -o jsonpath='{.items[0].metadata.name}')
+kubectl describe pod "$POD_NAME" -n qa | grep -i "image id"
+================================================================================

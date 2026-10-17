@@ -1,0 +1,95 @@
+================================================================================
+URL SHORTENER: ALLOWED CODES, ALPHABET RULES & DEMO EXAMPLES
+================================================================================
+
+1. WHY CERTAIN CHARACTERS ARE LIMITED / FORBIDDEN
+--------------------------------------------------------------------------------
+The starter application is deliberately designed with human-friendly UX in mind:
+- It excludes visually ambiguous characters so humans reading codes aloud never
+  have to guess.
+- Specifically excluded:
+  * 0 (zero), o (lowercase o), O (uppercase O) -> easily confused!
+  * 1 (one), l (lowercase L), I (uppercase i)  -> easily confused!
+  * Symbols: hyphens (-), underscores (_), spaces, punctuation are not permitted.
+  * Length: Must be 3 to 32 characters long.
+  * Reserved keywords: "api", "health", "static", "admin", "login", "docs",
+    "openapi.json" cannot be used (as they collide with application API paths).
+
+
+2. THE EXACT ALLOWED ALPHABET (56 CHARACTERS)
+--------------------------------------------------------------------------------
+Base-58 Alphabet:
+"23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+
+- Numbers Allowed:     2 3 4 5 6 7 8 9        (0 and 1 are FORBIDDEN)
+- Lowercase Allowed:   a b c d e f g h i j k m n p q r s t u v w x y z
+                       (l and o are FORBIDDEN)
+- Uppercase Allowed:   A B C D E F G H J K L M N P Q R S T U V W X Y Z
+                       (I and O are FORBIDDEN)
+
+
+3. COMMON WORDS THAT FAIL (AND WHY)
+--------------------------------------------------------------------------------
+❌ "demo"     -> FAILS because it contains 'o'
+❌ "python"   -> FAILS because it contains 'o'
+❌ "google"   -> FAILS because it contains 'o' and 'l'
+❌ "cool"     -> FAILS because it contains 'o' and 'l'
+❌ "link"     -> FAILS because it contains 'l'
+❌ "my-link"  -> FAILS because it contains '-' and 'l'
+❌ "url"      -> FAILS because it contains 'l'
+❌ "app1"     -> FAILS because it contains '1'
+❌ "api"      -> FAILS because it is a RESERVED application route
+
+
+4. GOLDEN DEMO EXAMPLES (GUARANTEED TO WORK 100%)
+--------------------------------------------------------------------------------
+Use any of these great custom codes for your demonstration:
+
+Option 1:
+  Custom Code:  github
+  Target URL:   https://github.com
+
+Option 2:
+  Custom Code:  fast
+  Target URL:   https://fastapi.tiangolo.com
+
+Option 3:
+  Custom Code:  speed
+  Target URL:   https://en.wikipedia.org
+
+Option 4:
+  Custom Code:  mycup
+  Target URL:   https://example.com/demo-test
+
+Option 5:
+  Custom Code:  matrix
+  Target URL:   https://docker.com
+
+Option 6:
+  Custom Code:  quick
+  Target URL:   https://circleci.com
+
+Option 7:
+  Custom Code:  cyber
+  Target URL:   https://kubernetes.io
+
+Option 8:
+  Custom Code:  dev7
+  Target URL:   https://docs.python.org
+
+Option 9:
+  Custom Code:  super
+  Target URL:   https://stackoverflow.com
+
+Option 10:
+  Custom Code:  web2
+  Target URL:   https://git-scm.com
+
+
+5. OR LEAVE CUSTOM CODE EMPTY (AUTO-GENERATED!)
+--------------------------------------------------------------------------------
+Remember: Custom code is 100% OPTIONAL!
+If you leave the custom code input box completely empty, the shortener automatically
+generates a unique, collision-proof short code from PostgreSQL's atomic sequence
+(e.g., /g, /7, /redELVFJi, etc.). This is the primary feature of the application!
+================================================================================
