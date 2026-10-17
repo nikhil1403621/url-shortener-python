@@ -151,7 +151,7 @@ flowchart TD
 | CI/CD | CircleCI | Automated validation and build workflows |
 | Testing | Pytest | Automated tests |
 | Code Quality | Ruff | Python linting |
-| Container Orchestration | Kubernetes | Deploys and manages containers |
+| Conta  iner Orchestration | Kubernetes | Deploys and manages containers |
 
 ---
 
