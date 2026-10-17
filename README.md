@@ -20,7 +20,7 @@ to ship it.
 | | |
 |---|---|
 | **Runtime** | Python 3.12 |
-| **Install dependencies** | `pip install -r requirements.txt` |
+|  **Install dependencies** | `pip install -r requirements.txt` |
 | **Start the app** | `uvicorn app.main:app --host 0.0.0.0 --port 8080` |
 | **Listens on** | port 8080, bound to `0.0.0.0` |
 | **Environment variables** | `DATABASE_URL`, `REDIS_URL` |
