@@ -20,7 +20,7 @@ spec:
       containers:
         - name: app
           image: nikhil1403621/url-shortener-python:stage
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
